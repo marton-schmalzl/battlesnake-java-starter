@@ -8,11 +8,8 @@ import com.amazonaws.services.lambda.runtime.Context
 import com.amazonaws.services.lambda.runtime.RequestHandler
 import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyRequestEvent
 import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyResponseEvent
-import com.fasterxml.jackson.databind.DeserializationFeature
-import com.fasterxml.jackson.databind.ObjectMapper
-import java.io.IOException
-import java.util.Arrays
-import java.util.Random
+import com.beust.klaxon.Klaxon
+import kotlin.random.Random
 
 /**
  * Handler for requests to Lambda function.
@@ -25,24 +22,19 @@ class MoveHandler : RequestHandler<APIGatewayProxyRequestEvent, APIGatewayProxyR
         val response = APIGatewayProxyResponseEvent()
             .withHeaders(headers)
         try {
-            val objectMapper = ObjectMapper()
-                .configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false)
-            val state = objectMapper.reader().readValue(input.body, GameState::class.java)
-            val head = state.you.head
-            val body = state.you.body
+            val state = Klaxon().parse<GameState>(input.body) ?: throw RuntimeException("parse error")
 
             val possibleMoves = mutableListOf(Direction.up, Direction.down, Direction.left, Direction.right)
 
-            avoidMyNeck(head, body, possibleMoves)
+            avoidMyNeck(state.you.head, state.you.body, possibleMoves)
             context.logger.log("Moves: $possibleMoves")
-            val rand = Random()
-            val direction = possibleMoves[rand.nextInt(possibleMoves.size)]
+            val direction = possibleMoves[Random.nextInt(possibleMoves.size)]
             context.logger.log("Direction: $direction")
             val move = Move(direction.toString())
             return response
-                .withBody(objectMapper.writer().writeValueAsString(move))
+                .withBody(Klaxon().toJsonString(move))
                 .withStatusCode(200)
-        } catch (e: IOException) {
+        } catch (e: Exception) {
             context.logger.log(e.message)
             return response
                 .withBody("{}")

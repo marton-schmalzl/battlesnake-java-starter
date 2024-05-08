@@ -25,7 +25,7 @@ public class StartHandler implements RequestHandler<APIGatewayProxyRequestEvent,
         try {
             ObjectMapper objectMapper = new ObjectMapper();
             GameState gameState = objectMapper.reader().readValue(input.getBody(), GameState.class);
-            System.out.println("Game started, id: " + gameState.game().id());
+            System.out.println("Game started, id: " + gameState.game.id());
             return response
                     .withStatusCode(200);
         } catch (IOException e) {
